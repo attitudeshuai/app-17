@@ -129,8 +129,13 @@ public class ProcurementSuggestionsController : BaseController
     public async Task<IActionResult> ExportByMedicine([FromQuery] ProcurementExportQueryParamsDto queryParams)
     {
         var userId = GetCurrentUserId();
+        _logger.LogInformation($"按药品维度导出采购建议报表: 家庭ID={queryParams.HouseholdId}");
         var response = await _procurementService.ExportByMedicineAsync(queryParams, userId);
-        return ApiResult(response);
+        if (response.Code != 200 || response.Data == null)
+        {
+            return ApiResult(response);
+        }
+        return File(response.Data.Content, response.Data.ContentType, response.Data.FileName);
     }
 
     [HttpGet("export/member")]
@@ -140,7 +145,12 @@ public class ProcurementSuggestionsController : BaseController
     public async Task<IActionResult> ExportByMember([FromQuery] ProcurementExportQueryParamsDto queryParams)
     {
         var userId = GetCurrentUserId();
+        _logger.LogInformation($"按成员维度导出采购建议报表: 家庭ID={queryParams.HouseholdId}");
         var response = await _procurementService.ExportByMemberAsync(queryParams, userId);
-        return ApiResult(response);
+        if (response.Code != 200 || response.Data == null)
+        {
+            return ApiResult(response);
+        }
+        return File(response.Data.Content, response.Data.ContentType, response.Data.FileName);
     }
 }

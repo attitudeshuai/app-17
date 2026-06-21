@@ -119,3 +119,10 @@ public class ProcurementExportQueryParamsDto
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 }
+
+public class CsvExportResult
+{
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = "text/csv; charset=utf-8";
+    public byte[] Content { get; set; } = Array.Empty<byte>();
+}

@@ -1,3 +1,4 @@
+using System.Text;
 using Mapster;
 using MedCabinet.Application.DTOs.Common;
 using MedCabinet.Application.DTOs.ProcurementSuggestion;
@@ -141,107 +142,200 @@ public class ProcurementSuggestionService : IProcurementSuggestionService
             var members = await _unitOfWork.HouseholdMembers.FindAsync(hm => hm.HouseholdId == request.HouseholdId);
             var memberList = members.ToList();
 
+            if (!memberList.Any())
+            {
+                return ApiResponse<List<ProcurementSuggestionDto>>.Success(new List<ProcurementSuggestionDto>());
+            }
+
             var generatedSuggestions = new List<ProcurementSuggestion>();
 
             foreach (var medicine in medicineList)
             {
                 var daysUntilExpiry = (int)(medicine.ExpiryDate - DateTime.Now).TotalDays;
 
-                var allUsages = await _unitOfWork.MedUsages.FindAsync(
-                    mu => mu.MedicineId == medicine.Id);
-
+                var allUsages = await _unitOfWork.MedUsages.FindAsync(mu => mu.MedicineId == medicine.Id);
                 var usageList = allUsages.ToList();
                 var recentUsages = usageList.Where(mu => mu.UsedAt >= DateTime.Now.AddDays(-30)).ToList();
 
-                var usagesByMember = recentUsages
-                    .GroupBy(mu => mu.UserId)
-                    .ToList();
+                var perMemberSuggestions = new List<ProcurementSuggestion>();
+                var totalSuggestedQuantityForMedicine = 0;
+                var highestUrgencyForMedicine = UrgencyLevel.Low;
 
-                var totalUsageLast30Days = recentUsages.Sum(mu => mu.UsedQuantity);
-                var usageFrequency = totalUsageLast30Days / 30m;
+                foreach (var member in memberList)
+                {
+                    var memberUsages = recentUsages.Where(mu => mu.UserId == member.UserId).ToList();
+                    var memberTotalUsage = memberUsages.Sum(mu => mu.UsedQuantity);
+                    var memberUsageFrequency = memberTotalUsage / 30m;
 
-                bool needsProcurement = false;
-                int suggestedQuantity = 0;
-                var urgencyLevel = UrgencyLevel.Low;
-                var notes = string.Empty;
-                int? targetUserId = null;
+                    bool memberNeedsProcurement = false;
+                    int memberSuggestedQuantity = 0;
+                    var memberUrgency = UrgencyLevel.Low;
+                    var memberNotes = string.Empty;
 
-                if (medicine.StockQuantity <= 0)
-                {
-                    needsProcurement = true;
-                    suggestedQuantity = Math.Max((int)Math.Ceiling(usageFrequency * 30), 1);
-                    urgencyLevel = UrgencyLevel.Critical;
-                    notes = "库存已空，需立即采购";
-                }
-                else if (medicine.StockQuantity <= 5)
-                {
-                    var daysRemaining = usageFrequency > 0 ? (int)(medicine.StockQuantity / usageFrequency) : 999;
-                    needsProcurement = true;
-                    suggestedQuantity = Math.Max((int)Math.Ceiling(usageFrequency * 30), 1);
-                    urgencyLevel = daysRemaining <= 3 ? UrgencyLevel.Critical :
-                                   daysRemaining <= 7 ? UrgencyLevel.High :
-                                   UrgencyLevel.Medium;
-                    notes = $"库存不足(剩余{medicine.StockQuantity})，预计可用{daysRemaining}天";
-                }
-                else if (daysUntilExpiry <= 30 && daysUntilExpiry > 0)
-                {
-                    needsProcurement = true;
-                    suggestedQuantity = Math.Max((int)Math.Ceiling(usageFrequency * 30), 1);
-                    urgencyLevel = daysUntilExpiry <= 7 ? UrgencyLevel.High : UrgencyLevel.Medium;
-                    notes = $"药品将在{daysUntilExpiry}天后过期，需提前采购替换";
-                }
-                else if (usageFrequency > 0)
-                {
-                    var daysRemaining = (int)(medicine.StockQuantity / usageFrequency);
-                    if (daysRemaining <= 14)
+                    if (memberUsageFrequency > 0)
                     {
-                        needsProcurement = true;
-                        suggestedQuantity = Math.Max((int)Math.Ceiling(usageFrequency * 30), 1);
-                        urgencyLevel = daysRemaining <= 7 ? UrgencyLevel.High : UrgencyLevel.Medium;
-                        notes = $"按当前用量，库存预计可用{daysRemaining}天";
+                        var memberStockShare = medicine.StockQuantity > 0
+                            ? (int)Math.Ceiling((double)medicine.StockQuantity * memberTotalUsage / Math.Max(recentUsages.Sum(mu => mu.UsedQuantity), 1))
+                            : 0;
+
+                        var memberDaysRemaining = memberUsageFrequency > 0
+                            ? (int)(memberStockShare / memberUsageFrequency)
+                            : 999;
+
+                        if (medicine.StockQuantity <= 0)
+                        {
+                            memberNeedsProcurement = true;
+                            memberSuggestedQuantity = Math.Max((int)Math.Ceiling(memberUsageFrequency * 30), 1);
+                            memberUrgency = UrgencyLevel.Critical;
+                            memberNotes = "库存已空，需立即采购";
+                        }
+                        else if (memberDaysRemaining <= 3)
+                        {
+                            memberNeedsProcurement = true;
+                            memberSuggestedQuantity = Math.Max((int)Math.Ceiling(memberUsageFrequency * 30), 1);
+                            memberUrgency = UrgencyLevel.Critical;
+                            memberNotes = $"按成员用量，预计{memberDaysRemaining}天耗尽";
+                        }
+                        else if (memberDaysRemaining <= 7)
+                        {
+                            memberNeedsProcurement = true;
+                            memberSuggestedQuantity = Math.Max((int)Math.Ceiling(memberUsageFrequency * 30), 1);
+                            memberUrgency = UrgencyLevel.High;
+                            memberNotes = $"按成员用量，预计{memberDaysRemaining}天耗尽";
+                        }
+                        else if (memberDaysRemaining <= 14)
+                        {
+                            memberNeedsProcurement = true;
+                            memberSuggestedQuantity = Math.Max((int)Math.Ceiling(memberUsageFrequency * 30), 1);
+                            memberUrgency = UrgencyLevel.Medium;
+                            memberNotes = $"按成员用量，预计{memberDaysRemaining}天耗尽";
+                        }
+                    }
+                    else if (daysUntilExpiry <= 30 && daysUntilExpiry > 0)
+                    {
+                        memberNeedsProcurement = true;
+                        memberSuggestedQuantity = 1;
+                        memberUrgency = daysUntilExpiry <= 7 ? UrgencyLevel.High : UrgencyLevel.Medium;
+                        memberNotes = $"药品将在{daysUntilExpiry}天后过期，需提前采购替换";
+                    }
+
+                    if (!memberNeedsProcurement)
+                    {
+                        continue;
+                    }
+
+                    var memberSuggestedPurchaseDate = CalculateSuggestedPurchaseDate(memberUrgency);
+
+                    var existingMemberPending = await _unitOfWork.ProcurementSuggestions.ExistsAsync(
+                        ps => ps.MedicineId == medicine.Id &&
+                              ps.HouseholdId == request.HouseholdId &&
+                              ps.UserId == member.UserId &&
+                              ps.Status == ProcurementStatus.Pending);
+
+                    if (existingMemberPending)
+                    {
+                        continue;
+                    }
+
+                    var memberSuggestion = new ProcurementSuggestion
+                    {
+                        HouseholdId = request.HouseholdId,
+                        MedicineId = medicine.Id,
+                        UserId = member.UserId,
+                        SuggestedQuantity = memberSuggestedQuantity,
+                        SuggestedPurchaseDate = memberSuggestedPurchaseDate,
+                        UrgencyLevel = memberUrgency,
+                        Status = ProcurementStatus.Pending,
+                        UsageFrequency = memberUsageFrequency,
+                        CurrentStock = medicine.StockQuantity,
+                        DaysUntilExpiry = daysUntilExpiry,
+                        Notes = memberNotes
+                    };
+
+                    await _unitOfWork.ProcurementSuggestions.AddAsync(memberSuggestion);
+                    perMemberSuggestions.Add(memberSuggestion);
+                    generatedSuggestions.Add(memberSuggestion);
+
+                    totalSuggestedQuantityForMedicine += memberSuggestedQuantity;
+                    if (memberUrgency > highestUrgencyForMedicine)
+                    {
+                        highestUrgencyForMedicine = memberUrgency;
                     }
                 }
 
-                if (!needsProcurement)
+                if (medicine.StockQuantity <= 0 && !perMemberSuggestions.Any())
                 {
-                    continue;
+                    var familyFrequency = recentUsages.Sum(mu => mu.UsedQuantity) / 30m;
+                    var suggestedQty = Math.Max((int)Math.Ceiling(familyFrequency * 30), 1);
+                    var urgency = UrgencyLevel.Critical;
+                    var suggestedDate = CalculateSuggestedPurchaseDate(urgency);
+
+                    var existingHouseholdPending = await _unitOfWork.ProcurementSuggestions.ExistsAsync(
+                        ps => ps.MedicineId == medicine.Id &&
+                              ps.HouseholdId == request.HouseholdId &&
+                              ps.UserId == null &&
+                              ps.Status == ProcurementStatus.Pending);
+
+                    if (!existingHouseholdPending)
+                    {
+                        var householdSuggestion = new ProcurementSuggestion
+                        {
+                            HouseholdId = request.HouseholdId,
+                            MedicineId = medicine.Id,
+                            UserId = null,
+                            SuggestedQuantity = suggestedQty,
+                            SuggestedPurchaseDate = suggestedDate,
+                            UrgencyLevel = urgency,
+                            Status = ProcurementStatus.Pending,
+                            UsageFrequency = familyFrequency,
+                            CurrentStock = medicine.StockQuantity,
+                            DaysUntilExpiry = daysUntilExpiry,
+                            Notes = "库存已空，家庭汇总采购"
+                        };
+                        await _unitOfWork.ProcurementSuggestions.AddAsync(householdSuggestion);
+                        generatedSuggestions.Add(householdSuggestion);
+                    }
                 }
-
-                if (usagesByMember.Any())
+                else if (perMemberSuggestions.Any())
                 {
-                    var topUserGroup = usagesByMember.OrderByDescending(g => g.Sum(mu => mu.UsedQuantity)).First();
-                    targetUserId = topUserGroup.Key;
+                    var familyFrequency = recentUsages.Sum(mu => mu.UsedQuantity) / 30m;
+                    var aggregatedUrgency = highestUrgencyForMedicine;
+                    var aggregatedDate = CalculateSuggestedPurchaseDate(aggregatedUrgency);
+                    var memberNames = string.Join("、", perMemberSuggestions
+                        .Where(s => s.UserId.HasValue)
+                        .Select(s =>
+                        {
+                            var m = memberList.FirstOrDefault(mm => mm.UserId == s.UserId);
+                            return m?.User?.Username ?? $"成员{s.UserId}";
+                        })
+                        .Distinct());
+
+                    var existingHouseholdPending = await _unitOfWork.ProcurementSuggestions.ExistsAsync(
+                        ps => ps.MedicineId == medicine.Id &&
+                              ps.HouseholdId == request.HouseholdId &&
+                              ps.UserId == null &&
+                              ps.Status == ProcurementStatus.Pending);
+
+                    if (!existingHouseholdPending)
+                    {
+                        var householdSuggestion = new ProcurementSuggestion
+                        {
+                            HouseholdId = request.HouseholdId,
+                            MedicineId = medicine.Id,
+                            UserId = null,
+                            SuggestedQuantity = totalSuggestedQuantityForMedicine,
+                            SuggestedPurchaseDate = aggregatedDate,
+                            UrgencyLevel = aggregatedUrgency,
+                            Status = ProcurementStatus.Pending,
+                            UsageFrequency = familyFrequency,
+                            CurrentStock = medicine.StockQuantity,
+                            DaysUntilExpiry = daysUntilExpiry,
+                            Notes = $"家庭汇总采购，涉及成员: {memberNames}"
+                        };
+                        await _unitOfWork.ProcurementSuggestions.AddAsync(householdSuggestion);
+                        generatedSuggestions.Add(householdSuggestion);
+                    }
                 }
-
-                var suggestedPurchaseDate = CalculateSuggestedPurchaseDate(urgencyLevel);
-
-                var existingPending = await _unitOfWork.ProcurementSuggestions.ExistsAsync(
-                    ps => ps.MedicineId == medicine.Id &&
-                          ps.HouseholdId == request.HouseholdId &&
-                          ps.Status == ProcurementStatus.Pending);
-
-                if (existingPending)
-                {
-                    continue;
-                }
-
-                var suggestion = new ProcurementSuggestion
-                {
-                    HouseholdId = request.HouseholdId,
-                    MedicineId = medicine.Id,
-                    UserId = targetUserId,
-                    SuggestedQuantity = suggestedQuantity,
-                    SuggestedPurchaseDate = suggestedPurchaseDate,
-                    UrgencyLevel = urgencyLevel,
-                    Status = ProcurementStatus.Pending,
-                    UsageFrequency = usageFrequency,
-                    CurrentStock = medicine.StockQuantity,
-                    DaysUntilExpiry = daysUntilExpiry,
-                    Notes = notes
-                };
-
-                await _unitOfWork.ProcurementSuggestions.AddAsync(suggestion);
-                generatedSuggestions.Add(suggestion);
             }
 
             if (generatedSuggestions.Any())
@@ -250,16 +344,21 @@ public class ProcurementSuggestionService : IProcurementSuggestionService
                 _logger.LogInformation($"为家庭{request.HouseholdId}生成了{generatedSuggestions.Count}条采购建议");
             }
 
+            var memberIds = memberList.Select(m => m.UserId).Distinct().ToList();
+            var users = memberIds.Any()
+                ? (await _unitOfWork.Users.FindAsync(u => memberIds.Contains(u.Id))).ToDictionary(u => u.Id, u => u.Username)
+                : new Dictionary<int, string>();
+
             var resultDtos = generatedSuggestions.Select(ps =>
             {
                 var dto = ps.Adapt<ProcurementSuggestionDto>();
-                dto.MedicineName = ps.Medicine?.Name ?? medicineList.First(m => m.Id == ps.MedicineId).Name;
-                dto.Username = ps.User?.Username;
+                dto.MedicineName = ps.Medicine?.Name ?? medicineList.FirstOrDefault(m => m.Id == ps.MedicineId)?.Name ?? string.Empty;
+                dto.Username = ps.UserId.HasValue ? users.GetValueOrDefault(ps.UserId.Value, ps.User?.Username ?? string.Empty) : null;
                 dto.HouseholdName = ps.Household?.Name ?? string.Empty;
                 return dto;
             }).ToList();
 
-            return ApiResponse<List<ProcurementSuggestionDto>>.Success(resultDtos, $"成功生成{generatedSuggestions.Count}条采购建议");
+            return ApiResponse<List<ProcurementSuggestionDto>>.Success(resultDtos, $"成功生成{generatedSuggestions.Count}条采购建议(含成员明细和家庭汇总)");
         }
         catch (Exception ex)
         {
@@ -557,7 +656,7 @@ public class ProcurementSuggestionService : IProcurementSuggestionService
         }
     }
 
-    public async Task<ApiResponse<List<ProcurementByMedicineDto>>> ExportByMedicineAsync(
+    public async Task<ApiResponse<CsvExportResult>> ExportByMedicineAsync(
         ProcurementExportQueryParamsDto queryParams, int userId)
     {
         try
@@ -567,18 +666,18 @@ public class ProcurementSuggestionService : IProcurementSuggestionService
 
             if (!householdIds.Any())
             {
-                return ApiResponse<List<ProcurementByMedicineDto>>.Success(new List<ProcurementByMedicineDto>());
+                return ApiResponse<CsvExportResult>.Success(EmptyCsv("procurement-by-medicine"));
             }
 
             if (queryParams.HouseholdId.HasValue && !householdIds.Contains(queryParams.HouseholdId.Value))
             {
-                return ApiResponse<List<ProcurementByMedicineDto>>.Error("无权限导出此家庭数据", 403);
+                return ApiResponse<CsvExportResult>.Error("无权限导出此家庭数据", 403);
             }
 
             var isAdmin = await IsAdminInHousehold(queryParams.HouseholdId, userId);
             if (!isAdmin)
             {
-                return ApiResponse<List<ProcurementByMedicineDto>>.Error("仅管理员可导出采购报表", 403);
+                return ApiResponse<CsvExportResult>.Error("仅管理员可导出采购报表", 403);
             }
 
             var targetHouseholdIds = queryParams.HouseholdId.HasValue
@@ -601,30 +700,66 @@ public class ProcurementSuggestionService : IProcurementSuggestionService
             var medicines = await _unitOfWork.Medicines.FindAsync(m => medicineIds.Contains(m.Id));
             var medicineDict = medicines.ToDictionary(m => m.Id, m => m.Name);
 
-            var result = suggestionList
+            var grouped = suggestionList
                 .GroupBy(s => s.MedicineId)
-                .Select(g => new ProcurementByMedicineDto
+                .Select(g => new
                 {
                     MedicineId = g.Key,
                     MedicineName = medicineDict.GetValueOrDefault(g.Key, "未知药品"),
                     SuggestionCount = g.Count(),
                     TotalSuggestedQuantity = g.Sum(s => s.SuggestedQuantity),
+                    TotalPurchasedQuantity = g.Sum(s => s.PurchasedQuantity ?? 0),
                     PurchasedCount = g.Count(s => s.Status == ProcurementStatus.Purchased),
-                    PendingCount = g.Count(s => s.Status == ProcurementStatus.Pending)
+                    PendingCount = g.Count(s => s.Status == ProcurementStatus.Pending),
+                    IgnoredCount = g.Count(s => s.Status == ProcurementStatus.Ignored),
+                    CriticalCount = g.Count(s => s.UrgencyLevel == UrgencyLevel.Critical),
+                    HighCount = g.Count(s => s.UrgencyLevel == UrgencyLevel.High),
+                    MediumCount = g.Count(s => s.UrgencyLevel == UrgencyLevel.Medium),
+                    LowCount = g.Count(s => s.UrgencyLevel == UrgencyLevel.Low)
                 })
                 .OrderByDescending(m => m.SuggestionCount)
                 .ToList();
 
-            return ApiResponse<List<ProcurementByMedicineDto>>.Success(result);
+            var headers = new[]
+            {
+                "药品ID", "药品名称", "建议总条数", "建议采购总数量",
+                "已采购总数量", "已采购条数", "待采购条数", "已忽略条数",
+                "紧急条数", "高优先级条数", "中优先级条数", "低优先级条数"
+            };
+
+            var rows = grouped.Select(r => new[]
+            {
+                r.MedicineId.ToString(),
+                EscapeCsv(r.MedicineName),
+                r.SuggestionCount.ToString(),
+                r.TotalSuggestedQuantity.ToString(),
+                r.TotalPurchasedQuantity.ToString(),
+                r.PurchasedCount.ToString(),
+                r.PendingCount.ToString(),
+                r.IgnoredCount.ToString(),
+                r.CriticalCount.ToString(),
+                r.HighCount.ToString(),
+                r.MediumCount.ToString(),
+                r.LowCount.ToString()
+            }).ToList();
+
+            var fileName = $"procurement-by-medicine-{DateTime.Now:yyyyMMddHHmmss}.csv";
+            var csvBytes = BuildCsv(headers, rows);
+
+            return ApiResponse<CsvExportResult>.Success(new CsvExportResult
+            {
+                FileName = fileName,
+                Content = csvBytes
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "按药品维度导出采购建议报表失败");
-            return ApiResponse<List<ProcurementByMedicineDto>>.Error("导出报表失败: " + ex.Message, 500);
+            return ApiResponse<CsvExportResult>.Error("导出报表失败: " + ex.Message, 500);
         }
     }
 
-    public async Task<ApiResponse<List<ProcurementByMemberDto>>> ExportByMemberAsync(
+    public async Task<ApiResponse<CsvExportResult>> ExportByMemberAsync(
         ProcurementExportQueryParamsDto queryParams, int userId)
     {
         try
@@ -634,18 +769,18 @@ public class ProcurementSuggestionService : IProcurementSuggestionService
 
             if (!householdIds.Any())
             {
-                return ApiResponse<List<ProcurementByMemberDto>>.Success(new List<ProcurementByMemberDto>());
+                return ApiResponse<CsvExportResult>.Success(EmptyCsv("procurement-by-member"));
             }
 
             if (queryParams.HouseholdId.HasValue && !householdIds.Contains(queryParams.HouseholdId.Value))
             {
-                return ApiResponse<List<ProcurementByMemberDto>>.Error("无权限导出此家庭数据", 403);
+                return ApiResponse<CsvExportResult>.Error("无权限导出此家庭数据", 403);
             }
 
             var isAdmin = await IsAdminInHousehold(queryParams.HouseholdId, userId);
             if (!isAdmin)
             {
-                return ApiResponse<List<ProcurementByMemberDto>>.Error("仅管理员可导出采购报表", 403);
+                return ApiResponse<CsvExportResult>.Error("仅管理员可导出采购报表", 403);
             }
 
             var targetHouseholdIds = queryParams.HouseholdId.HasValue
@@ -662,34 +797,132 @@ public class ProcurementSuggestionService : IProcurementSuggestionService
             if (queryParams.EndDate.HasValue)
                 filtered = filtered.Where(s => s.CreatedAt < queryParams.EndDate.Value.AddDays(1));
 
-            var suggestionList = filtered.Where(s => s.UserId.HasValue).ToList();
+            var suggestionList = filtered.ToList();
 
-            var userIds = suggestionList.Select(s => s.UserId!.Value).Distinct().ToList();
+            var userIds = suggestionList.Where(s => s.UserId.HasValue).Select(s => s.UserId!.Value).Distinct().ToList();
             var users = userIds.Any()
                 ? (await _unitOfWork.Users.FindAsync(u => userIds.Contains(u.Id))).ToDictionary(u => u.Id, u => u.Username)
                 : new Dictionary<int, string>();
 
-            var result = suggestionList
+            var householdSuggestionCount = suggestionList.Count(s => !s.UserId.HasValue);
+            var householdSuggestedQty = suggestionList.Where(s => !s.UserId.HasValue).Sum(s => s.SuggestedQuantity);
+            var householdPurchasedQty = suggestionList.Where(s => !s.UserId.HasValue).Sum(s => s.PurchasedQuantity ?? 0);
+
+            var grouped = suggestionList
+                .Where(s => s.UserId.HasValue)
                 .GroupBy(s => s.UserId!.Value)
-                .Select(g => new ProcurementByMemberDto
+                .Select(g => new
                 {
                     UserId = g.Key,
                     Username = users.GetValueOrDefault(g.Key, "未知用户"),
                     SuggestionCount = g.Count(),
                     TotalSuggestedQuantity = g.Sum(s => s.SuggestedQuantity),
+                    TotalPurchasedQuantity = g.Sum(s => s.PurchasedQuantity ?? 0),
                     PurchasedCount = g.Count(s => s.Status == ProcurementStatus.Purchased),
-                    PendingCount = g.Count(s => s.Status == ProcurementStatus.Pending)
+                    PendingCount = g.Count(s => s.Status == ProcurementStatus.Pending),
+                    IgnoredCount = g.Count(s => s.Status == ProcurementStatus.Ignored),
+                    CriticalCount = g.Count(s => s.UrgencyLevel == UrgencyLevel.Critical),
+                    HighCount = g.Count(s => s.UrgencyLevel == UrgencyLevel.High),
+                    MediumCount = g.Count(s => s.UrgencyLevel == UrgencyLevel.Medium),
+                    LowCount = g.Count(s => s.UrgencyLevel == UrgencyLevel.Low)
                 })
                 .OrderByDescending(m => m.SuggestionCount)
                 .ToList();
 
-            return ApiResponse<List<ProcurementByMemberDto>>.Success(result);
+            var rows = new List<string[]>();
+
+            if (householdSuggestionCount > 0)
+            {
+                rows.Add(new[]
+                {
+                    "",
+                    "家庭汇总",
+                    householdSuggestionCount.ToString(),
+                    householdSuggestedQty.ToString(),
+                    householdPurchasedQty.ToString(),
+                    suggestionList.Count(s => !s.UserId.HasValue && s.Status == ProcurementStatus.Purchased).ToString(),
+                    suggestionList.Count(s => !s.UserId.HasValue && s.Status == ProcurementStatus.Pending).ToString(),
+                    suggestionList.Count(s => !s.UserId.HasValue && s.Status == ProcurementStatus.Ignored).ToString(),
+                    suggestionList.Count(s => !s.UserId.HasValue && s.UrgencyLevel == UrgencyLevel.Critical).ToString(),
+                    suggestionList.Count(s => !s.UserId.HasValue && s.UrgencyLevel == UrgencyLevel.High).ToString(),
+                    suggestionList.Count(s => !s.UserId.HasValue && s.UrgencyLevel == UrgencyLevel.Medium).ToString(),
+                    suggestionList.Count(s => !s.UserId.HasValue && s.UrgencyLevel == UrgencyLevel.Low).ToString()
+                });
+            }
+
+            rows.AddRange(grouped.Select(r => new[]
+            {
+                r.UserId.ToString(),
+                EscapeCsv(r.Username),
+                r.SuggestionCount.ToString(),
+                r.TotalSuggestedQuantity.ToString(),
+                r.TotalPurchasedQuantity.ToString(),
+                r.PurchasedCount.ToString(),
+                r.PendingCount.ToString(),
+                r.IgnoredCount.ToString(),
+                r.CriticalCount.ToString(),
+                r.HighCount.ToString(),
+                r.MediumCount.ToString(),
+                r.LowCount.ToString()
+            }));
+
+            var headers = new[]
+            {
+                "成员ID", "成员名称", "建议总条数", "建议采购总数量",
+                "已采购总数量", "已采购条数", "待采购条数", "已忽略条数",
+                "紧急条数", "高优先级条数", "中优先级条数", "低优先级条数"
+            };
+
+            var fileName = $"procurement-by-member-{DateTime.Now:yyyyMMddHHmmss}.csv";
+            var csvBytes = BuildCsv(headers, rows);
+
+            return ApiResponse<CsvExportResult>.Success(new CsvExportResult
+            {
+                FileName = fileName,
+                Content = csvBytes
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "按家庭成员维度导出采购建议报表失败");
-            return ApiResponse<List<ProcurementByMemberDto>>.Error("导出报表失败: " + ex.Message, 500);
+            return ApiResponse<CsvExportResult>.Error("导出报表失败: " + ex.Message, 500);
         }
+    }
+
+    private static byte[] BuildCsv(string[] headers, List<string[]> rows)
+    {
+        var sb = new StringBuilder();
+        sb.Append('\uFEFF');
+        sb.AppendLine(string.Join(",", headers));
+
+        foreach (var row in rows)
+        {
+            sb.AppendLine(string.Join(",", row));
+        }
+
+        return Encoding.UTF8.GetBytes(sb.ToString());
+    }
+
+    private static string EscapeCsv(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+        {
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
+
+        return value;
+    }
+
+    private static CsvExportResult EmptyCsv(string prefix)
+    {
+        return new CsvExportResult
+        {
+            FileName = $"{prefix}-{DateTime.Now:yyyyMMddHHmmss}.csv",
+            Content = new byte[] { 0xEF, 0xBB, 0xBF }
+        };
     }
 
     private DateTime CalculateSuggestedPurchaseDate(UrgencyLevel urgencyLevel)
