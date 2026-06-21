@@ -16,6 +16,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<Medicine> Medicines { get; }
     public IRepository<MedUsage> MedUsages { get; }
     public IRepository<MedAlert> MedAlerts { get; }
+    public IRepository<ProcurementSuggestion> ProcurementSuggestions { get; }
 
     public UnitOfWork(AppDbContext context)
     {
@@ -26,6 +27,7 @@ public class UnitOfWork : IUnitOfWork
         Medicines = new Repository<Medicine>(context);
         MedUsages = new Repository<MedUsage>(context);
         MedAlerts = new Repository<MedAlert>(context);
+        ProcurementSuggestions = new Repository<ProcurementSuggestion>(context);
     }
 
     public async Task<int> SaveChangesAsync()

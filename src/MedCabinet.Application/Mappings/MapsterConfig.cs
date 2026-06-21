@@ -5,6 +5,7 @@ using MedCabinet.Application.DTOs.HouseholdMember;
 using MedCabinet.Application.DTOs.Medicine;
 using MedCabinet.Application.DTOs.MedUsage;
 using MedCabinet.Application.DTOs.MedAlert;
+using MedCabinet.Application.DTOs.ProcurementSuggestion;
 using MedCabinet.Domain.Entities;
 
 namespace MedCabinet.Application.Mappings;
@@ -46,5 +47,13 @@ public static class MapsterConfig
         TypeAdapterConfig<CreateMedicineRequestDto, Medicine>.NewConfig();
         TypeAdapterConfig<CreateMedUsageRequestDto, MedUsage>.NewConfig();
         TypeAdapterConfig<CreateMedAlertRequestDto, MedAlert>.NewConfig();
+
+        // ProcurementSuggestion 映射
+        TypeAdapterConfig<ProcurementSuggestion, ProcurementSuggestionDto>.NewConfig()
+            .Map(dest => dest.MedicineName, src => src.Medicine != null ? src.Medicine.Name : string.Empty)
+            .Map(dest => dest.Username, src => src.User != null ? src.User.Username : null)
+            .Map(dest => dest.HouseholdName, src => src.Household != null ? src.Household.Name : string.Empty);
+
+        TypeAdapterConfig<CreateProcurementSuggestionRequestDto, ProcurementSuggestion>.NewConfig();
     }
 }

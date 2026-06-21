@@ -4,6 +4,7 @@ using MedCabinet.Application.DTOs.HouseholdMember;
 using MedCabinet.Application.DTOs.Medicine;
 using MedCabinet.Application.DTOs.MedUsage;
 using MedCabinet.Application.DTOs.MedAlert;
+using MedCabinet.Application.DTOs.ProcurementSuggestion;
 
 namespace MedCabinet.Application.Validators;
 
@@ -80,5 +81,64 @@ public class CreateMedAlertRequestValidator : AbstractValidator<CreateMedAlertRe
         RuleFor(x => x.Message)
             .NotEmpty().WithMessage("提醒消息不能为空")
             .Length(1, 500).WithMessage("提醒消息长度必须在1-500个字符之间");
+    }
+}
+
+public class GenerateProcurementSuggestionsRequestValidator : AbstractValidator<GenerateProcurementSuggestionsRequestDto>
+{
+    public GenerateProcurementSuggestionsRequestValidator()
+    {
+        RuleFor(x => x.HouseholdId)
+            .GreaterThan(0).WithMessage("家庭ID必须大于0");
+    }
+}
+
+public class CreateProcurementSuggestionRequestValidator : AbstractValidator<CreateProcurementSuggestionRequestDto>
+{
+    public CreateProcurementSuggestionRequestValidator()
+    {
+        RuleFor(x => x.HouseholdId)
+            .GreaterThan(0).WithMessage("家庭ID必须大于0");
+
+        RuleFor(x => x.MedicineId)
+            .GreaterThan(0).WithMessage("药品ID必须大于0");
+
+        RuleFor(x => x.SuggestedQuantity)
+            .GreaterThan(0).WithMessage("建议采购数量必须大于0");
+
+        RuleFor(x => x.SuggestedPurchaseDate)
+            .NotEmpty().WithMessage("建议采购日期不能为空");
+
+        RuleFor(x => x.Notes)
+            .MaximumLength(500).WithMessage("备注长度不能超过500个字符")
+            .When(x => x.Notes != null);
+    }
+}
+
+public class UpdateProcurementSuggestionRequestValidator : AbstractValidator<UpdateProcurementSuggestionRequestDto>
+{
+    public UpdateProcurementSuggestionRequestValidator()
+    {
+        RuleFor(x => x.SuggestedQuantity)
+            .GreaterThan(0).WithMessage("建议采购数量必须大于0")
+            .When(x => x.SuggestedQuantity.HasValue);
+
+        RuleFor(x => x.Notes)
+            .MaximumLength(500).WithMessage("备注长度不能超过500个字符")
+            .When(x => x.Notes != null);
+    }
+}
+
+public class MarkProcurementSuggestionRequestValidator : AbstractValidator<MarkProcurementSuggestionRequestDto>
+{
+    public MarkProcurementSuggestionRequestValidator()
+    {
+        RuleFor(x => x.PurchasedQuantity)
+            .GreaterThan(0).WithMessage("购买数量必须大于0")
+            .When(x => x.PurchasedQuantity.HasValue && x.Status == Domain.Enums.ProcurementStatus.Purchased);
+
+        RuleFor(x => x.Notes)
+            .MaximumLength(500).WithMessage("备注长度不能超过500个字符")
+            .When(x => x.Notes != null);
     }
 }

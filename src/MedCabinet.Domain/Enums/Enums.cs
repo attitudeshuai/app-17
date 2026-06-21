@@ -23,3 +23,18 @@ public enum HouseholdRole
     Admin,
     Member
 }
+
+public enum ProcurementStatus
+{
+    Pending,
+    Purchased,
+    Ignored
+}
+
+public enum UrgencyLevel
+{
+    Low,
+    Medium,
+    High,
+    Critical
+}

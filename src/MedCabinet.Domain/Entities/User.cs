@@ -13,4 +13,5 @@ public class User
     public virtual ICollection<HouseholdMember> HouseholdMembers { get; set; } = new List<HouseholdMember>();
     public virtual ICollection<MedUsage> MedUsages { get; set; } = new List<MedUsage>();
     public virtual ICollection<MedAlert> MedAlerts { get; set; } = new List<MedAlert>();
+    public virtual ICollection<ProcurementSuggestion> ProcurementSuggestions { get; set; } = new List<ProcurementSuggestion>();
 }

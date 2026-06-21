@@ -21,4 +21,5 @@ public class Medicine
     public virtual Household? Household { get; set; }
     public virtual ICollection<MedUsage> MedUsages { get; set; } = new List<MedUsage>();
     public virtual ICollection<MedAlert> MedAlerts { get; set; } = new List<MedAlert>();
+    public virtual ICollection<ProcurementSuggestion> ProcurementSuggestions { get; set; } = new List<ProcurementSuggestion>();
 }

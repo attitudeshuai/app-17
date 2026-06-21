@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Medicine> Medicines { get; set; }
     public DbSet<MedUsage> MedUsages { get; set; }
     public DbSet<MedAlert> MedAlerts { get; set; }
+    public DbSet<ProcurementSuggestion> ProcurementSuggestions { get; set; }
 
     public override int SaveChanges()
     {
@@ -175,6 +176,36 @@ public class AppDbContext : DbContext
                   .WithMany(u => u.MedAlerts)
                   .HasForeignKey(ma => ma.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ProcurementSuggestion 配置
+        modelBuilder.Entity<ProcurementSuggestion>(entity =>
+        {
+            entity.HasKey(ps => ps.Id);
+            entity.Property(ps => ps.SuggestedQuantity).IsRequired();
+            entity.Property(ps => ps.SuggestedPurchaseDate).IsRequired();
+            entity.Property(ps => ps.UrgencyLevel).IsRequired();
+            entity.Property(ps => ps.Status).IsRequired();
+            entity.Property(ps => ps.UsageFrequency).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(ps => ps.CurrentStock).IsRequired();
+            entity.Property(ps => ps.DaysUntilExpiry).IsRequired();
+            entity.Property(ps => ps.Notes).HasMaxLength(500);
+            entity.Property(ps => ps.PurchasedQuantity);
+
+            entity.HasOne(ps => ps.Household)
+                  .WithMany(h => h.ProcurementSuggestions)
+                  .HasForeignKey(ps => ps.HouseholdId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ps => ps.Medicine)
+                  .WithMany(m => m.ProcurementSuggestions)
+                  .HasForeignKey(ps => ps.MedicineId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ps => ps.User)
+                  .WithMany(u => u.ProcurementSuggestions)
+                  .HasForeignKey(ps => ps.UserId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
