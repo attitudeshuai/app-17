@@ -1,0 +1,50 @@
+services:
+  app:
+    build: .
+    container_name: medcabinet-app
+    ports:
+      - "8087:8087"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=medcabinet
+      - DB_USER=app_user
+      - DB_PASSWORD=app_pass
+      - JWT_SECRET=MedCabinetSuperSecretKeyForJWTToken2024
+      - JWT_ISSUER=MedCabinet
+      - JWT_AUDIENCE=MedCabinetApi
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: medcabinet-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_pass
+      - MYSQL_DATABASE=medcabinet
+      - MYSQL_USER=app_user
+      - MYSQL_PASSWORD=app_pass
+    ports:
+      - "13314:3306"
+    volumes:
+      - medcabinet_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  adminer:
+    image: adminer:latest
+    container_name: medcabinet-adminer
+    ports:
+      - "8090:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=db
+    depends_on:
+      - db
+
+volumes:
+  medcabinet_db_data:
