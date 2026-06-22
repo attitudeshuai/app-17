@@ -3,6 +3,7 @@ using MedCabinet.Application.DTOs.Auth;
 using MedCabinet.Application.DTOs.Household;
 using MedCabinet.Application.DTOs.HouseholdMember;
 using MedCabinet.Application.DTOs.Medicine;
+using MedCabinet.Application.DTOs.MedicineRecognition;
 using MedCabinet.Application.DTOs.MedUsage;
 using MedCabinet.Application.DTOs.MedAlert;
 using MedCabinet.Application.DTOs.ProcurementSuggestion;
@@ -98,5 +99,8 @@ public static class MapsterConfig
             .Map(dest => dest.BorrowerHouseholdName, src => src.BorrowerHousehold != null ? src.BorrowerHousehold.Name : string.Empty)
             .Map(dest => dest.BorrowerUsername, src => src.BorrowerUser != null ? src.BorrowerUser.Username : string.Empty)
             .Map(dest => dest.RemainingQuantity, src => src.BorrowedQuantity - src.ReturnedQuantity);
+
+        // MedicineRecognitionRecord 映射
+        TypeAdapterConfig<MedicineRecognitionRecord, MedicineRecognitionRecordDto>.NewConfig();
     }
 }

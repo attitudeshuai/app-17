@@ -23,6 +23,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<SharedMedicine> SharedMedicines { get; }
     public IRepository<BorrowRequest> BorrowRequests { get; }
     public IRepository<BorrowRecord> BorrowRecords { get; }
+    public IRepository<MedicineRecognitionRecord> MedicineRecognitionRecords { get; }
 
     public UnitOfWork(AppDbContext context)
     {
@@ -40,6 +41,7 @@ public class UnitOfWork : IUnitOfWork
         SharedMedicines = new Repository<SharedMedicine>(context);
         BorrowRequests = new Repository<BorrowRequest>(context);
         BorrowRecords = new Repository<BorrowRecord>(context);
+        MedicineRecognitionRecords = new Repository<MedicineRecognitionRecord>(context);
     }
 
     public async Task<int> SaveChangesAsync()

@@ -1,3 +1,4 @@
+using MedCabinet.Application.Interfaces;
 using MedCabinet.Domain.Interfaces;
 using MedCabinet.Infrastructure.Data;
 using MedCabinet.Infrastructure.Repositories;
@@ -30,6 +31,9 @@ public static class DependencyInjection
 
         // 后台定时服务
         services.AddHostedService<BorrowOverdueCheckerService>();
+
+        // OCR 服务
+        services.AddScoped<IOcrService, MockOcrService>();
 
         return services;
     }

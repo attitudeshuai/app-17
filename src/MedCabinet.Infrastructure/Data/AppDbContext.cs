@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<SharedMedicine> SharedMedicines { get; set; }
     public DbSet<BorrowRequest> BorrowRequests { get; set; }
     public DbSet<BorrowRecord> BorrowRecords { get; set; }
+    public DbSet<MedicineRecognitionRecord> MedicineRecognitionRecords { get; set; }
 
     public override int SaveChanges()
     {
@@ -381,6 +382,56 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(br => br.BorrowerUserId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // MedicineRecognitionRecord 配置
+        modelBuilder.Entity<MedicineRecognitionRecord>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.ImageUrl).IsRequired().HasMaxLength(500);
+            entity.Property(r => r.RecognitionStatus).IsRequired();
+            entity.Property(r => r.ConfirmStatus).IsRequired();
+            entity.Property(r => r.RecognizedName).HasMaxLength(200);
+            entity.Property(r => r.RecognizedSpecification).HasMaxLength(200);
+            entity.Property(r => r.RecognizedExpiryDate).HasMaxLength(50);
+            entity.Property(r => r.RecognizedDosage).HasMaxLength(500);
+            entity.Property(r => r.RecognizedManufacturer).HasMaxLength(200);
+            entity.Property(r => r.RawOcrText).HasColumnType("text");
+            entity.Property(r => r.ConfidenceScore).HasColumnType("decimal(5,4)");
+            entity.Property(r => r.RecognitionError).HasMaxLength(500);
+            entity.Property(r => r.MatchScore).HasColumnType("decimal(5,2)");
+            entity.Property(r => r.CorrectedName).HasMaxLength(200);
+            entity.Property(r => r.CorrectedSpecification).HasMaxLength(200);
+            entity.Property(r => r.CorrectedExpiryDate).HasMaxLength(50);
+            entity.Property(r => r.CorrectedDosage).HasMaxLength(500);
+            entity.Property(r => r.CorrectedManufacturer).HasMaxLength(200);
+            entity.Property(r => r.CreatedAt).IsRequired();
+
+            entity.HasOne(r => r.User)
+                  .WithMany()
+                  .HasForeignKey(r => r.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.Household)
+                  .WithMany()
+                  .HasForeignKey(r => r.HouseholdId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(r => r.MatchedMedicine)
+                  .WithMany()
+                  .HasForeignKey(r => r.MatchedMedicineId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(r => r.FinalMedicine)
+                  .WithMany()
+                  .HasForeignKey(r => r.FinalMedicineId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(r => r.UserId);
+            entity.HasIndex(r => r.HouseholdId);
+            entity.HasIndex(r => r.RecognitionStatus);
+            entity.HasIndex(r => r.ConfirmStatus);
+            entity.HasIndex(r => r.CreatedAt);
         });
     }
 }

@@ -17,6 +17,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<SharedMedicine> SharedMedicines { get; }
     IRepository<BorrowRequest> BorrowRequests { get; }
     IRepository<BorrowRecord> BorrowRecords { get; }
+    IRepository<MedicineRecognitionRecord> MedicineRecognitionRecords { get; }
 
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();

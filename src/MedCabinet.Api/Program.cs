@@ -136,6 +136,9 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 // CORS
 app.UseCors("AllowAll");
 
+// 静态文件
+app.UseStaticFiles();
+
 // 路由
 app.UseRouting();
 

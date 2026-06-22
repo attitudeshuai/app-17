@@ -77,3 +77,19 @@ public enum BorrowRecordStatus
     Overdue,
     Lost
 }
+
+public enum OcrRecognitionStatus
+{
+    Pending,
+    Success,
+    PartialSuccess,
+    Failed
+}
+
+public enum RecognitionConfirmStatus
+{
+    Pending,
+    Confirmed,
+    Rejected,
+    Modified
+}
