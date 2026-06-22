@@ -135,6 +135,7 @@ public class AppDbContext : DbContext
             entity.HasKey(m => m.Id);
             entity.Property(m => m.Name).IsRequired().HasMaxLength(200);
             entity.Property(m => m.Category).IsRequired().HasMaxLength(50);
+            entity.Property(m => m.Specification).HasMaxLength(200);
             entity.Property(m => m.Indication).HasMaxLength(500);
             entity.Property(m => m.Dosage).HasMaxLength(200);
             entity.Property(m => m.StorageLocation).HasMaxLength(200);

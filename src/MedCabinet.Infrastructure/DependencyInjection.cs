@@ -33,7 +33,15 @@ public static class DependencyInjection
         services.AddHostedService<BorrowOverdueCheckerService>();
 
         // OCR 服务
-        services.AddScoped<IOcrService, MockOcrService>();
+        var ocrProvider = configuration["Ocr:Provider"]?.ToLower() ?? "tesseract";
+        if (ocrProvider == "mock")
+        {
+            services.AddScoped<IOcrService, MockOcrService>();
+        }
+        else
+        {
+            services.AddScoped<IOcrService, TesseractOcrService>();
+        }
 
         return services;
     }

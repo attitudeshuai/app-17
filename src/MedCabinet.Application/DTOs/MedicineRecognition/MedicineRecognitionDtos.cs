@@ -1,3 +1,4 @@
+using MedCabinet.Application.DTOs.Medicine;
 using MedCabinet.Domain.Enums;
 
 namespace MedCabinet.Application.DTOs.MedicineRecognition;
@@ -18,6 +19,7 @@ public class MedicineRecognitionResultDto
     public int RecordId { get; set; }
     public OcrRecognitionStatus Status { get; set; }
     public RecognizedMedicineInfoDto RecognizedInfo { get; set; } = new();
+    public CreateMedicineRequestDto PrefillData { get; set; } = new();
     public List<MatchedMedicineDto> MatchedMedicines { get; set; } = new();
     public string? RawOcrText { get; set; }
     public string? ImageUrl { get; set; }
@@ -39,6 +41,7 @@ public class ConfirmRecognitionRequestDto
     public int RecordId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
+    public string Specification { get; set; } = string.Empty;
     public string Indication { get; set; } = string.Empty;
     public string Dosage { get; set; } = string.Empty;
     public DateTime ExpiryDate { get; set; }

@@ -8,6 +8,7 @@ public class Medicine
     public int HouseholdId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
+    public string Specification { get; set; } = string.Empty;
     public string Indication { get; set; } = string.Empty;
     public string Dosage { get; set; } = string.Empty;
     public DateTime ExpiryDate { get; set; }

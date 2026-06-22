@@ -146,6 +146,7 @@ public class MedicineService : IMedicineService
                 HouseholdId = request.HouseholdId,
                 Name = request.Name,
                 Category = request.Category,
+                Specification = request.Specification,
                 Indication = request.Indication,
                 Dosage = request.Dosage,
                 ExpiryDate = request.ExpiryDate,
@@ -196,6 +197,8 @@ public class MedicineService : IMedicineService
                 medicine.Name = request.Name;
             if (!string.IsNullOrEmpty(request.Category))
                 medicine.Category = request.Category;
+            if (request.Specification != null)
+                medicine.Specification = request.Specification;
             if (request.Indication != null)
                 medicine.Indication = request.Indication;
             if (request.Dosage != null)

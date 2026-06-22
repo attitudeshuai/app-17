@@ -113,11 +113,14 @@ public class MedicineRecognitionService : IMedicineRecognitionService
 
             recognizedInfo.MissingFields = missingFields;
 
+            var prefillData = GeneratePrefillData(recognizedInfo, imageUrl, householdId);
+
             var result = new MedicineRecognitionResultDto
             {
                 RecordId = record.Id,
                 Status = recognitionStatus,
                 RecognizedInfo = recognizedInfo,
+                PrefillData = prefillData,
                 MatchedMedicines = matchedMedicines,
                 RawOcrText = ocrResult.RawText,
                 ImageUrl = imageUrl,
@@ -235,6 +238,7 @@ public class MedicineRecognitionService : IMedicineRecognitionService
                 HouseholdId = request.HouseholdId,
                 Name = request.Name,
                 Category = request.Category,
+                Specification = request.Specification,
                 Indication = request.Indication,
                 Dosage = request.Dosage,
                 ExpiryDate = request.ExpiryDate,
@@ -255,7 +259,7 @@ public class MedicineRecognitionService : IMedicineRecognitionService
                 ? RecognitionConfirmStatus.Modified
                 : RecognitionConfirmStatus.Confirmed;
             record.CorrectedName = request.Name;
-            record.CorrectedSpecification = null;
+            record.CorrectedSpecification = request.Specification;
             record.CorrectedExpiryDate = request.ExpiryDate.ToString("yyyy-MM-dd");
             record.CorrectedDosage = request.Dosage;
             record.CorrectedManufacturer = null;
@@ -731,7 +735,7 @@ public class MedicineRecognitionService : IMedicineRecognitionService
                 {
                     MedicineId = m.Medicine.Id,
                     Name = m.Medicine.Name,
-                    Specification = m.Medicine.Dosage,
+                    Specification = m.Medicine.Specification,
                     Category = m.Medicine.Category,
                     MatchScore = Math.Round(m.Score, 2),
                     IsExactMatch = m.Score >= 95
@@ -803,6 +807,35 @@ public class MedicineRecognitionService : IMedicineRecognitionService
         }
 
         return $"/uploads/ocr/{newFileName}";
+    }
+
+    private static CreateMedicineRequestDto GeneratePrefillData(
+        RecognizedMedicineInfoDto recognizedInfo, string imageUrl, int? householdId)
+    {
+        var prefill = new CreateMedicineRequestDto
+        {
+            HouseholdId = householdId ?? 0,
+            Name = recognizedInfo.Name ?? string.Empty,
+            Category = string.Empty,
+            Specification = recognizedInfo.Specification ?? string.Empty,
+            Indication = string.Empty,
+            Dosage = recognizedInfo.Dosage ?? string.Empty,
+            ExpiryDate = DateTime.MinValue,
+            StockQuantity = 0,
+            StorageLocation = string.Empty,
+            Contraindications = string.Empty,
+            PhotoUrl = imageUrl
+        };
+
+        if (!string.IsNullOrWhiteSpace(recognizedInfo.ExpiryDate))
+        {
+            if (DateTime.TryParse(recognizedInfo.ExpiryDate, out var expiryDate))
+            {
+                prefill.ExpiryDate = expiryDate;
+            }
+        }
+
+        return prefill;
     }
 
     private async Task<bool> HasHouseholdAccessAsync(int householdId, int userId)
