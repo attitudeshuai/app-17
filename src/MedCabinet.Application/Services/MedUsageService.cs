@@ -12,11 +12,13 @@ public class MedUsageService : IMedUsageService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MedUsageService> _logger;
+    private readonly IHealthProfileService _healthProfileService;
 
-    public MedUsageService(IUnitOfWork unitOfWork, ILogger<MedUsageService> logger)
+    public MedUsageService(IUnitOfWork unitOfWork, ILogger<MedUsageService> logger, IHealthProfileService healthProfileService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _healthProfileService = healthProfileService;
     }
 
     public async Task<ApiResponse<PagedResult<MedUsageDto>>> GetMedUsagesAsync(MedUsageQueryParamsDto queryParams, int userId)
@@ -140,6 +142,12 @@ public class MedUsageService : IMedUsageService
             var user = await _unitOfWork.Users.GetByIdAsync(usage.UserId);
             dto.Username = user?.Username ?? string.Empty;
 
+            var checkResult = await _healthProfileService.CheckMedicineContraindicationsAsync(usage.UserId, usage.MedicineId, userId);
+            if (checkResult.Code == 200 && checkResult.Data != null && checkResult.Data.HasWarnings)
+            {
+                dto.ContraindicationWarnings = checkResult.Data.Warnings;
+            }
+
             return ApiResponse<MedUsageDto>.Success(dto);
         }
         catch (Exception ex)
@@ -214,6 +222,12 @@ public class MedUsageService : IMedUsageService
 
             var user = await _unitOfWork.Users.GetByIdAsync(userId);
             dto.Username = user?.Username ?? string.Empty;
+
+            var checkResult = await _healthProfileService.CheckMedicineContraindicationsAsync(userId, request.MedicineId, userId);
+            if (checkResult.Code == 200 && checkResult.Data != null && checkResult.Data.HasWarnings)
+            {
+                dto.ContraindicationWarnings = checkResult.Data.Warnings;
+            }
 
             return ApiResponse<MedUsageDto>.Success(dto, "创建成功");
         }

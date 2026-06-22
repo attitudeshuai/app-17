@@ -6,6 +6,7 @@ using MedCabinet.Application.DTOs.Medicine;
 using MedCabinet.Application.DTOs.MedUsage;
 using MedCabinet.Application.DTOs.MedAlert;
 using MedCabinet.Application.DTOs.ProcurementSuggestion;
+using MedCabinet.Application.DTOs.HealthProfile;
 using MedCabinet.Domain.Entities;
 
 namespace MedCabinet.Application.Mappings;
@@ -55,5 +56,15 @@ public static class MapsterConfig
             .Map(dest => dest.HouseholdName, src => src.Household != null ? src.Household.Name : string.Empty);
 
         TypeAdapterConfig<CreateProcurementSuggestionRequestDto, ProcurementSuggestion>.NewConfig();
+
+        // HealthProfile 映射
+        TypeAdapterConfig<HealthProfile, HealthProfileDto>.NewConfig()
+            .Map(dest => dest.Username, src => src.User != null ? src.User.Username : string.Empty)
+            .Map(dest => dest.HouseholdName, src => src.Household != null ? src.Household.Name : string.Empty);
+
+        TypeAdapterConfig<CreateHealthProfileRequestDto, HealthProfile>.NewConfig();
+
+        // HealthProfileAuditLog 映射
+        TypeAdapterConfig<HealthProfileAuditLog, HealthProfileAuditLogDto>.NewConfig();
     }
 }

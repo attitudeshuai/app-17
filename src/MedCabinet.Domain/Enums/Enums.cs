@@ -38,3 +38,16 @@ public enum UrgencyLevel
     High,
     Critical
 }
+
+public enum BloodType
+{
+    Unknown,
+    APositive,
+    ANegative,
+    BPositive,
+    BNegative,
+    ABPositive,
+    ABNegative,
+    OPositive,
+    ONegative
+}

@@ -1,3 +1,4 @@
+using MedCabinet.Application.DTOs.HealthProfile;
 using MedCabinet.Domain.Enums;
 
 namespace MedCabinet.Application.DTOs.Medicine;
@@ -18,6 +19,7 @@ public class MedicineDto
     public MedicineStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public int DaysUntilExpiry { get; set; }
+    public List<ContraindicationWarningDto>? PersonalContraindicationWarnings { get; set; }
 }
 
 public class CreateMedicineRequestDto

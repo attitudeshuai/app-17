@@ -1,3 +1,5 @@
+using MedCabinet.Application.DTOs.HealthProfile;
+
 namespace MedCabinet.Application.DTOs.MedUsage;
 
 public class MedUsageDto
@@ -11,6 +13,7 @@ public class MedUsageDto
     public string? SymptomNote { get; set; }
     public string MedicineName { get; set; } = string.Empty;
     public string Username { get; set; } = string.Empty;
+    public List<ContraindicationWarningDto>? ContraindicationWarnings { get; set; }
 }
 
 public class CreateMedUsageRequestDto

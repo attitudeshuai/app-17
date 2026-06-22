@@ -13,11 +13,13 @@ public class MedicineService : IMedicineService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MedicineService> _logger;
+    private readonly IHealthProfileService _healthProfileService;
 
-    public MedicineService(IUnitOfWork unitOfWork, ILogger<MedicineService> logger)
+    public MedicineService(IUnitOfWork unitOfWork, ILogger<MedicineService> logger, IHealthProfileService healthProfileService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _healthProfileService = healthProfileService;
     }
 
     public async Task<ApiResponse<PagedResult<MedicineDto>>> GetMedicinesAsync(MedicineQueryParamsDto queryParams, int userId)
@@ -109,6 +111,13 @@ public class MedicineService : IMedicineService
             }
 
             var dto = medicine.Adapt<MedicineDto>();
+
+            var checkResult = await _healthProfileService.CheckMedicineContraindicationsAsync(userId, id, userId);
+            if (checkResult.Code == 200 && checkResult.Data != null)
+            {
+                dto.PersonalContraindicationWarnings = checkResult.Data.Warnings;
+            }
+
             return ApiResponse<MedicineDto>.Success(dto);
         }
         catch (Exception ex)

@@ -11,6 +11,8 @@ public interface IUnitOfWork : IDisposable
     IRepository<MedUsage> MedUsages { get; }
     IRepository<MedAlert> MedAlerts { get; }
     IRepository<ProcurementSuggestion> ProcurementSuggestions { get; }
+    IRepository<HealthProfile> HealthProfiles { get; }
+    IRepository<HealthProfileAuditLog> HealthProfileAuditLogs { get; }
 
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();

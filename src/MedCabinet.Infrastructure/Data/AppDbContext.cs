@@ -16,6 +16,8 @@ public class AppDbContext : DbContext
     public DbSet<MedUsage> MedUsages { get; set; }
     public DbSet<MedAlert> MedAlerts { get; set; }
     public DbSet<ProcurementSuggestion> ProcurementSuggestions { get; set; }
+    public DbSet<HealthProfile> HealthProfiles { get; set; }
+    public DbSet<HealthProfileAuditLog> HealthProfileAuditLogs { get; set; }
 
     public override int SaveChanges()
     {
@@ -206,6 +208,51 @@ public class AppDbContext : DbContext
                   .WithMany(u => u.ProcurementSuggestions)
                   .HasForeignKey(ps => ps.UserId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // HealthProfile 配置
+        modelBuilder.Entity<HealthProfile>(entity =>
+        {
+            entity.HasKey(hp => hp.Id);
+            entity.HasIndex(hp => new { hp.HouseholdId, hp.UserId }).IsUnique();
+            entity.Property(hp => hp.FullName).IsRequired().HasMaxLength(100);
+            entity.Property(hp => hp.Gender).HasMaxLength(10);
+            entity.Property(hp => hp.BloodType).IsRequired();
+            entity.Property(hp => hp.HeightCm).HasColumnType("decimal(5,2)");
+            entity.Property(hp => hp.WeightKg).HasColumnType("decimal(5,2)");
+            entity.Property(hp => hp.Allergies).HasMaxLength(1000);
+            entity.Property(hp => hp.ChronicDiseases).HasMaxLength(1000);
+            entity.Property(hp => hp.Medications).HasMaxLength(1000);
+            entity.Property(hp => hp.MedicalHistory).HasMaxLength(2000);
+            entity.Property(hp => hp.EmergencyContact).HasMaxLength(100);
+            entity.Property(hp => hp.EmergencyPhone).HasMaxLength(30);
+            entity.Property(hp => hp.Notes).HasMaxLength(2000);
+
+            entity.HasOne(hp => hp.User)
+                  .WithMany()
+                  .HasForeignKey(hp => hp.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(hp => hp.Household)
+                  .WithMany()
+                  .HasForeignKey(hp => hp.HouseholdId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // HealthProfileAuditLog 配置
+        modelBuilder.Entity<HealthProfileAuditLog>(entity =>
+        {
+            entity.HasKey(log => log.Id);
+            entity.Property(log => log.ModifiedByUsername).IsRequired().HasMaxLength(50);
+            entity.Property(log => log.ChangeType).IsRequired().HasMaxLength(20);
+            entity.Property(log => log.FieldName).HasMaxLength(50);
+            entity.Property(log => log.OldValue).HasMaxLength(2000);
+            entity.Property(log => log.NewValue).HasMaxLength(2000);
+
+            entity.HasOne(log => log.HealthProfile)
+                  .WithMany(hp => hp.AuditLogs)
+                  .HasForeignKey(log => log.HealthProfileId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
