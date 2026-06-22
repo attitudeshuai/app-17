@@ -9,13 +9,11 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(AppDbContext context)
     {
-        // 确保数据库已创建
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
 
-        // 检查是否已有数据
         if (await context.Users.AnyAsync())
         {
-            return; // 数据库已初始化
+            return;
         }
 
         // 创建用户

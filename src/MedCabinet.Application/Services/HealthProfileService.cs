@@ -44,8 +44,10 @@ public class HealthProfileService : IHealthProfileService
                 ? new List<int> { queryParams.HouseholdId.Value }
                 : userHouseholdIds;
 
-            var isAdminInAnyHousehold = userMembers.Any(m =>
-                targetHouseholdIds.Contains(m.HouseholdId) && (m.Role == "Owner" || m.Role == "Admin"));
+            var adminHouseholdIds = userMembers
+                .Where(m => targetHouseholdIds.Contains(m.HouseholdId) && (m.Role == "Owner" || m.Role == "Admin"))
+                .Select(m => m.HouseholdId)
+                .ToList();
 
             var householdIdFilter = queryParams.HouseholdId;
             var userIdFilter = queryParams.UserId;
@@ -67,7 +69,7 @@ public class HealthProfileService : IHealthProfileService
             var dtos = new List<HealthProfileDto>();
             foreach (var item in items)
             {
-                var canAccess = await CanAccessHealthProfile(item, currentUserId, isAdminInAnyHousehold);
+                var canAccess = await CanAccessHealthProfile(item, currentUserId, adminHouseholdIds);
                 if (!canAccess)
                     continue;
 
@@ -713,12 +715,12 @@ public class HealthProfileService : IHealthProfileService
         }
     }
 
-    private async Task<bool> CanAccessHealthProfile(HealthProfile profile, int currentUserId, bool? preCheckedAdmin = null)
+    private async Task<bool> CanAccessHealthProfile(HealthProfile profile, int currentUserId, List<int>? adminHouseholdIds = null)
     {
         if (profile.UserId == currentUserId)
             return true;
 
-        if (preCheckedAdmin.HasValue && preCheckedAdmin.Value)
+        if (adminHouseholdIds != null && adminHouseholdIds.Contains(profile.HouseholdId))
             return true;
 
         var members = await _unitOfWork.HouseholdMembers
