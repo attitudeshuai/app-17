@@ -715,8 +715,9 @@ public class MedicineRecognitionService : IMedicineRecognitionService
                 if (!string.IsNullOrWhiteSpace(specification) && score > 0)
                 {
                     var specLower = specification.ToLower().Trim();
-                    var medDosageLower = med.Dosage.ToLower().Trim();
-                    if (medDosageLower.Contains(specLower) || specLower.Contains(medDosageLower))
+                    var medSpecLower = med.Specification?.ToLower().Trim() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(medSpecLower) &&
+                        (medSpecLower.Contains(specLower) || specLower.Contains(medSpecLower)))
                     {
                         score = Math.Min(100, score + 10);
                     }
