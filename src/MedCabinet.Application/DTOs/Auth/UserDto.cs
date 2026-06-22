@@ -6,5 +6,6 @@ public class UserDto
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? Avatar { get; set; }
+    public bool IsSystemAdmin { get; set; }
     public DateTime CreatedAt { get; set; }
 }

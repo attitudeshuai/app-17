@@ -1,6 +1,7 @@
 using MedCabinet.Domain.Interfaces;
 using MedCabinet.Infrastructure.Data;
 using MedCabinet.Infrastructure.Repositories;
+using MedCabinet.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,9 @@ public static class DependencyInjection
         // 仓储
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+
+        // 后台定时服务
+        services.AddHostedService<BorrowOverdueCheckerService>();
 
         return services;
     }

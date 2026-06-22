@@ -247,6 +247,7 @@ public class BorrowService : IBorrowService
                 BorrowerHouseholdId = share.BorrowerHouseholdId,
                 BorrowerUserId = borrowRequest.RequesterUserId,
                 BorrowedQuantity = approvedQuantity,
+                ReturnedQuantity = 0,
                 BorrowedAt = DateTime.Now,
                 ExpectedReturnDate = borrowRequest.ExpectedReturnDate,
                 Status = BorrowRecordStatus.Active,
@@ -446,9 +447,9 @@ public class BorrowService : IBorrowService
                 return ApiResponse<BorrowRecordDto>.Error("归还数量必须大于0", 400);
             }
 
-            if (request.ReturnedQuantity > record.BorrowedQuantity)
+            if (request.ReturnedQuantity > record.RemainingQuantity)
             {
-                return ApiResponse<BorrowRecordDto>.Error($"归还数量不能超过借用数量，借用数量: {record.BorrowedQuantity}", 400);
+                return ApiResponse<BorrowRecordDto>.Error($"归还数量不能超过剩余未还数量，剩余数量: {record.RemainingQuantity}", 400);
             }
 
             var medicine = await _unitOfWork.Medicines.GetByIdAsync(record.MedicineId);
@@ -479,36 +480,41 @@ public class BorrowService : IBorrowService
 
             await _unitOfWork.Medicines.UpdateAsync(medicine);
 
-            record.ReturnedAt = DateTime.Now;
-            record.ReturnedQuantity = request.ReturnedQuantity;
-            record.Notes = request.Notes;
+            record.ReturnedQuantity += request.ReturnedQuantity;
+            record.LastReturnedAt = DateTime.Now;
 
-            if (request.ReturnedQuantity == record.BorrowedQuantity)
+            if (!string.IsNullOrEmpty(request.Notes))
+            {
+                record.Notes = string.IsNullOrEmpty(record.Notes) 
+                    ? request.Notes 
+                    : $"{record.Notes}; {DateTime.Now:yyyy-MM-dd HH:mm}: {request.Notes}";
+            }
+
+            if (record.ReturnedQuantity == record.BorrowedQuantity)
             {
                 record.Status = BorrowRecordStatus.Returned;
-            }
-            else
-            {
-                record.Status = BorrowRecordStatus.Lost;
+
+                var borrowRequest = await _unitOfWork.BorrowRequests.GetByIdAsync(record.BorrowRequestId);
+                if (borrowRequest != null && borrowRequest.Status == BorrowRequestStatus.Approved)
+                {
+                    borrowRequest.Status = BorrowRequestStatus.Returned;
+                    borrowRequest.UpdatedAt = DateTime.Now;
+                    await _unitOfWork.BorrowRequests.UpdateAsync(borrowRequest);
+                }
             }
 
             await _unitOfWork.BorrowRecords.UpdateAsync(record);
-
-            var borrowRequest = await _unitOfWork.BorrowRequests.GetByIdAsync(record.BorrowRequestId);
-            if (borrowRequest != null && borrowRequest.Status == BorrowRequestStatus.Approved)
-            {
-                borrowRequest.Status = BorrowRequestStatus.Returned;
-                borrowRequest.UpdatedAt = DateTime.Now;
-                await _unitOfWork.BorrowRequests.UpdateAsync(borrowRequest);
-            }
-
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
 
-            _logger.LogInformation($"归还药品成功: 记录ID={recordId}, 归还数量={request.ReturnedQuantity}, 库存已同步恢复");
+            var statusMessage = record.Status == BorrowRecordStatus.Returned 
+                ? "全部归还成功，库存已同步恢复" 
+                : $"部分归还成功，已归还 {record.ReturnedQuantity}/{record.BorrowedQuantity}，剩余 {record.RemainingQuantity}，库存已同步恢复";
+
+            _logger.LogInformation($"归还药品: 记录ID={recordId}, 本次归还={request.ReturnedQuantity}, 累计归还={record.ReturnedQuantity}/{record.BorrowedQuantity}");
 
             var dto = record.Adapt<BorrowRecordDto>();
-            return ApiResponse<BorrowRecordDto>.Success(dto, "归还成功，库存已同步恢复");
+            return ApiResponse<BorrowRecordDto>.Success(dto, statusMessage);
         }
         catch (Exception ex)
         {
@@ -690,10 +696,7 @@ public class BorrowService : IBorrowService
     private async Task<bool> IsAdminUserAsync(int userId)
     {
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
-        if (user == null) return false;
-
-        var allMemberships = await _unitOfWork.HouseholdMembers.FindAsync(hm => hm.UserId == userId);
-        return allMemberships.Any(hm => hm.Role == "Owner" || hm.Role == "Admin");
+        return user != null && user.IsSystemAdmin;
     }
 
     private async Task CreateStockAlertForLenderAsync(Medicine medicine, int lenderHouseholdId)

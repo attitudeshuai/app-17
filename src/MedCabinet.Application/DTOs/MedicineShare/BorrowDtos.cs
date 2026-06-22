@@ -61,8 +61,9 @@ public class BorrowRecordDto
     public int BorrowedQuantity { get; set; }
     public DateTime BorrowedAt { get; set; }
     public DateTime ExpectedReturnDate { get; set; }
-    public DateTime? ReturnedAt { get; set; }
-    public int? ReturnedQuantity { get; set; }
+    public DateTime? LastReturnedAt { get; set; }
+    public int ReturnedQuantity { get; set; }
+    public int RemainingQuantity { get; set; }
     public BorrowRecordStatus Status { get; set; }
     public string? Notes { get; set; }
     public bool ReminderSent { get; set; }

@@ -25,6 +25,7 @@ public static class DbSeeder
                 Email = "zhangsan@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
                 Avatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=zhangsan",
+                IsSystemAdmin = true,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             },

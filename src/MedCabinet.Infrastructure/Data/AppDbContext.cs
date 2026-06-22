@@ -93,6 +93,7 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Email).IsRequired().HasMaxLength(100);
             entity.Property(u => u.PasswordHash).IsRequired().HasMaxLength(255);
             entity.Property(u => u.Avatar).HasMaxLength(500);
+            entity.Property(u => u.IsSystemAdmin).HasDefaultValue(false);
         });
 
         // Household 配置
@@ -343,11 +344,13 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(br => br.Id);
             entity.Property(br => br.BorrowedQuantity).IsRequired();
+            entity.Property(br => br.ReturnedQuantity).IsRequired().HasDefaultValue(0);
             entity.Property(br => br.Status).IsRequired();
             entity.Property(br => br.Notes).HasMaxLength(500);
             entity.Property(br => br.BorrowedAt).IsRequired();
             entity.Property(br => br.ExpectedReturnDate).IsRequired();
             entity.Property(br => br.ReminderSent).HasDefaultValue(false);
+            entity.Ignore(br => br.RemainingQuantity);
 
             entity.HasOne(br => br.MedicineShare)
                   .WithMany(ms => ms.BorrowRecords)

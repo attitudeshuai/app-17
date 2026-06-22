@@ -14,11 +14,12 @@ public class BorrowRecord
     public int BorrowedQuantity { get; set; }
     public DateTime BorrowedAt { get; set; }
     public DateTime ExpectedReturnDate { get; set; }
-    public DateTime? ReturnedAt { get; set; }
-    public int? ReturnedQuantity { get; set; }
+    public DateTime? LastReturnedAt { get; set; }
+    public int ReturnedQuantity { get; set; }
     public BorrowRecordStatus Status { get; set; }
     public string? Notes { get; set; }
     public bool ReminderSent { get; set; }
+    public int RemainingQuantity => BorrowedQuantity - ReturnedQuantity;
 
     public virtual MedicineShare? MedicineShare { get; set; }
     public virtual BorrowRequest? BorrowRequest { get; set; }

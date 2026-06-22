@@ -96,6 +96,7 @@ public static class MapsterConfig
             .Map(dest => dest.MedicineName, src => src.Medicine != null ? src.Medicine.Name : string.Empty)
             .Map(dest => dest.LenderHouseholdName, src => src.LenderHousehold != null ? src.LenderHousehold.Name : string.Empty)
             .Map(dest => dest.BorrowerHouseholdName, src => src.BorrowerHousehold != null ? src.BorrowerHousehold.Name : string.Empty)
-            .Map(dest => dest.BorrowerUsername, src => src.BorrowerUser != null ? src.BorrowerUser.Username : string.Empty);
+            .Map(dest => dest.BorrowerUsername, src => src.BorrowerUser != null ? src.BorrowerUser.Username : string.Empty)
+            .Map(dest => dest.RemainingQuantity, src => src.BorrowedQuantity - src.ReturnedQuantity);
     }
 }
