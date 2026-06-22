@@ -18,6 +18,10 @@ public class AppDbContext : DbContext
     public DbSet<ProcurementSuggestion> ProcurementSuggestions { get; set; }
     public DbSet<HealthProfile> HealthProfiles { get; set; }
     public DbSet<HealthProfileAuditLog> HealthProfileAuditLogs { get; set; }
+    public DbSet<MedicineShare> MedicineShares { get; set; }
+    public DbSet<SharedMedicine> SharedMedicines { get; set; }
+    public DbSet<BorrowRequest> BorrowRequests { get; set; }
+    public DbSet<BorrowRecord> BorrowRecords { get; set; }
 
     public override int SaveChanges()
     {
@@ -253,6 +257,127 @@ public class AppDbContext : DbContext
                   .WithMany(hp => hp.AuditLogs)
                   .HasForeignKey(log => log.HealthProfileId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // MedicineShare 配置
+        modelBuilder.Entity<MedicineShare>(entity =>
+        {
+            entity.HasKey(ms => ms.Id);
+            entity.HasIndex(ms => ms.InviteCode).IsUnique();
+            entity.Property(ms => ms.InviteCode).IsRequired().HasMaxLength(20);
+            entity.Property(ms => ms.Status).IsRequired();
+            entity.Property(ms => ms.Notes).HasMaxLength(500);
+
+            entity.HasOne(ms => ms.LenderHousehold)
+                  .WithMany()
+                  .HasForeignKey(ms => ms.LenderHouseholdId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(ms => ms.BorrowerHousehold)
+                  .WithMany()
+                  .HasForeignKey(ms => ms.BorrowerHouseholdId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(ms => ms.CreatedByUser)
+                  .WithMany()
+                  .HasForeignKey(ms => ms.CreatedByUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(ms => ms.RevokedByUser)
+                  .WithMany()
+                  .HasForeignKey(ms => ms.RevokedByUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // SharedMedicine 配置
+        modelBuilder.Entity<SharedMedicine>(entity =>
+        {
+            entity.HasKey(sm => sm.Id);
+            entity.HasIndex(sm => new { sm.MedicineShareId, sm.MedicineId }).IsUnique();
+            entity.Property(sm => sm.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(sm => sm.MedicineShare)
+                  .WithMany(ms => ms.SharedMedicines)
+                  .HasForeignKey(sm => sm.MedicineShareId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(sm => sm.Medicine)
+                  .WithMany()
+                  .HasForeignKey(sm => sm.MedicineId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // BorrowRequest 配置
+        modelBuilder.Entity<BorrowRequest>(entity =>
+        {
+            entity.HasKey(br => br.Id);
+            entity.Property(br => br.RequestedQuantity).IsRequired();
+            entity.Property(br => br.Purpose).HasMaxLength(500);
+            entity.Property(br => br.Status).IsRequired();
+            entity.Property(br => br.RejectionReason).HasMaxLength(500);
+            entity.Property(br => br.ExpectedReturnDate).IsRequired();
+
+            entity.HasOne(br => br.MedicineShare)
+                  .WithMany(ms => ms.BorrowRequests)
+                  .HasForeignKey(br => br.MedicineShareId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(br => br.Medicine)
+                  .WithMany()
+                  .HasForeignKey(br => br.MedicineId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(br => br.RequesterUser)
+                  .WithMany()
+                  .HasForeignKey(br => br.RequesterUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(br => br.ApprovedByUser)
+                  .WithMany()
+                  .HasForeignKey(br => br.ApprovedByUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // BorrowRecord 配置
+        modelBuilder.Entity<BorrowRecord>(entity =>
+        {
+            entity.HasKey(br => br.Id);
+            entity.Property(br => br.BorrowedQuantity).IsRequired();
+            entity.Property(br => br.Status).IsRequired();
+            entity.Property(br => br.Notes).HasMaxLength(500);
+            entity.Property(br => br.BorrowedAt).IsRequired();
+            entity.Property(br => br.ExpectedReturnDate).IsRequired();
+            entity.Property(br => br.ReminderSent).HasDefaultValue(false);
+
+            entity.HasOne(br => br.MedicineShare)
+                  .WithMany(ms => ms.BorrowRecords)
+                  .HasForeignKey(br => br.MedicineShareId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(br => br.BorrowRequest)
+                  .WithOne(r => r.BorrowRecord)
+                  .HasForeignKey<BorrowRecord>(br => br.BorrowRequestId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(br => br.Medicine)
+                  .WithMany()
+                  .HasForeignKey(br => br.MedicineId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(br => br.LenderHousehold)
+                  .WithMany()
+                  .HasForeignKey(br => br.LenderHouseholdId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(br => br.BorrowerHousehold)
+                  .WithMany()
+                  .HasForeignKey(br => br.BorrowerHouseholdId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(br => br.BorrowerUser)
+                  .WithMany()
+                  .HasForeignKey(br => br.BorrowerUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

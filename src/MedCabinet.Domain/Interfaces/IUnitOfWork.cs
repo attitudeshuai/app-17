@@ -13,6 +13,10 @@ public interface IUnitOfWork : IDisposable
     IRepository<ProcurementSuggestion> ProcurementSuggestions { get; }
     IRepository<HealthProfile> HealthProfiles { get; }
     IRepository<HealthProfileAuditLog> HealthProfileAuditLogs { get; }
+    IRepository<MedicineShare> MedicineShares { get; }
+    IRepository<SharedMedicine> SharedMedicines { get; }
+    IRepository<BorrowRequest> BorrowRequests { get; }
+    IRepository<BorrowRecord> BorrowRecords { get; }
 
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();

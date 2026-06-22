@@ -24,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<IStatisticsService, StatisticsService>();
         services.AddScoped<IProcurementSuggestionService, ProcurementSuggestionService>();
         services.AddScoped<IHealthProfileService, HealthProfileService>();
+        services.AddScoped<IMedicineShareService, MedicineShareService>();
+        services.AddScoped<IBorrowService, BorrowService>();
 
         // 注册验证器
         services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();

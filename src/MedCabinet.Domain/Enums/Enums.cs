@@ -51,3 +51,29 @@ public enum BloodType
     OPositive,
     ONegative
 }
+
+public enum ShareStatus
+{
+    Pending,
+    Active,
+    Expired,
+    Revoked
+}
+
+public enum BorrowRequestStatus
+{
+    Pending,
+    Approved,
+    Rejected,
+    Cancelled,
+    Returned,
+    Overdue
+}
+
+public enum BorrowRecordStatus
+{
+    Active,
+    Returned,
+    Overdue,
+    Lost
+}

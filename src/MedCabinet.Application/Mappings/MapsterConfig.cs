@@ -7,6 +7,7 @@ using MedCabinet.Application.DTOs.MedUsage;
 using MedCabinet.Application.DTOs.MedAlert;
 using MedCabinet.Application.DTOs.ProcurementSuggestion;
 using MedCabinet.Application.DTOs.HealthProfile;
+using MedCabinet.Application.DTOs.MedicineShare;
 using MedCabinet.Domain.Entities;
 
 namespace MedCabinet.Application.Mappings;
@@ -66,5 +67,35 @@ public static class MapsterConfig
 
         // HealthProfileAuditLog 映射
         TypeAdapterConfig<HealthProfileAuditLog, HealthProfileAuditLogDto>.NewConfig();
+
+        // MedicineShare 映射
+        TypeAdapterConfig<MedicineShare, MedicineShareDto>.NewConfig()
+            .Map(dest => dest.LenderHouseholdName, src => src.LenderHousehold != null ? src.LenderHousehold.Name : string.Empty)
+            .Map(dest => dest.BorrowerHouseholdName, src => src.BorrowerHousehold != null ? src.BorrowerHousehold.Name : string.Empty)
+            .Map(dest => dest.CreatedByUsername, src => src.CreatedByUser != null ? src.CreatedByUser.Username : string.Empty);
+
+        // SharedMedicine 映射
+        TypeAdapterConfig<SharedMedicine, SharedMedicineDto>.NewConfig()
+            .Map(dest => dest.MedicineName, src => src.Medicine != null ? src.Medicine.Name : string.Empty)
+            .Map(dest => dest.MedicineCategory, src => src.Medicine != null ? src.Medicine.Category : string.Empty)
+            .Map(dest => dest.StockQuantity, src => src.Medicine != null ? src.Medicine.StockQuantity : 0)
+            .Map(dest => dest.ExpiryDate, src => src.Medicine != null ? src.Medicine.ExpiryDate : DateTime.MinValue);
+
+        // BorrowRequest 映射
+        TypeAdapterConfig<BorrowRequest, BorrowRequestDto>.NewConfig()
+            .Map(dest => dest.MedicineName, src => src.Medicine != null ? src.Medicine.Name : string.Empty)
+            .Map(dest => dest.RequesterUsername, src => src.RequesterUser != null ? src.RequesterUser.Username : string.Empty)
+            .Map(dest => dest.LenderHouseholdName, src => src.MedicineShare != null && src.MedicineShare.LenderHousehold != null ? src.MedicineShare.LenderHousehold.Name : string.Empty)
+            .Map(dest => dest.BorrowerHouseholdName, src => src.MedicineShare != null && src.MedicineShare.BorrowerHousehold != null ? src.MedicineShare.BorrowerHousehold.Name : string.Empty)
+            .Map(dest => dest.LenderHouseholdId, src => src.MedicineShare != null ? src.MedicineShare.LenderHouseholdId : 0)
+            .Map(dest => dest.BorrowerHouseholdId, src => src.MedicineShare != null ? src.MedicineShare.BorrowerHouseholdId : 0)
+            .Map(dest => dest.ApprovedByUsername, src => src.ApprovedByUser != null ? src.ApprovedByUser.Username : string.Empty);
+
+        // BorrowRecord 映射
+        TypeAdapterConfig<BorrowRecord, BorrowRecordDto>.NewConfig()
+            .Map(dest => dest.MedicineName, src => src.Medicine != null ? src.Medicine.Name : string.Empty)
+            .Map(dest => dest.LenderHouseholdName, src => src.LenderHousehold != null ? src.LenderHousehold.Name : string.Empty)
+            .Map(dest => dest.BorrowerHouseholdName, src => src.BorrowerHousehold != null ? src.BorrowerHousehold.Name : string.Empty)
+            .Map(dest => dest.BorrowerUsername, src => src.BorrowerUser != null ? src.BorrowerUser.Username : string.Empty);
     }
 }

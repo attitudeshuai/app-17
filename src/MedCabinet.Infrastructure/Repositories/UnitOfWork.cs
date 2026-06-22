@@ -19,6 +19,10 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<ProcurementSuggestion> ProcurementSuggestions { get; }
     public IRepository<HealthProfile> HealthProfiles { get; }
     public IRepository<HealthProfileAuditLog> HealthProfileAuditLogs { get; }
+    public IRepository<MedicineShare> MedicineShares { get; }
+    public IRepository<SharedMedicine> SharedMedicines { get; }
+    public IRepository<BorrowRequest> BorrowRequests { get; }
+    public IRepository<BorrowRecord> BorrowRecords { get; }
 
     public UnitOfWork(AppDbContext context)
     {
@@ -32,6 +36,10 @@ public class UnitOfWork : IUnitOfWork
         ProcurementSuggestions = new Repository<ProcurementSuggestion>(context);
         HealthProfiles = new Repository<HealthProfile>(context);
         HealthProfileAuditLogs = new Repository<HealthProfileAuditLog>(context);
+        MedicineShares = new Repository<MedicineShare>(context);
+        SharedMedicines = new Repository<SharedMedicine>(context);
+        BorrowRequests = new Repository<BorrowRequest>(context);
+        BorrowRecords = new Repository<BorrowRecord>(context);
     }
 
     public async Task<int> SaveChangesAsync()
